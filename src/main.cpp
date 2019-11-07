@@ -3,6 +3,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <Arduino.h>
+#include <Servo.h>
 
 #include <NTPClient.h>
 #include <time.h>
@@ -33,6 +34,9 @@ const int LED_BLUE = 2;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 
+Servo motor;  // create servo object to control a servo
+static const int servoPin = 13;
+
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
       deviceConnected = true;
@@ -44,6 +48,29 @@ class MyServerCallbacks: public BLEServerCallbacks {
 };
 
 class MyCallbacks: public BLECharacteristicCallbacks {
+
+    void startaMotor(){
+      int i = 0;
+      while(i < 4) {
+        for(int posDegree = 0; posDegree < 180; posDegree++) {
+          Serial.println(posDegree);
+          motor.write(posDegree);
+          delay(10);
+        }
+
+        for(int posDegree = 180; posDegree >= 0; posDegree--) {
+          Serial.println(posDegree);
+          motor.write(posDegree);
+          delay(10);
+        }
+        i++;
+      }
+
+      // reseta posição do motor
+      delay(100);
+      motor.write(180);            
+      delay(100);
+    }
 
     void writeFirebase(String timeStamp) {
       FirebaseJson json;
@@ -89,12 +116,10 @@ class MyCallbacks: public BLECharacteristicCallbacks {
           if(liga.compare(rxValue)){
             timeClient.forceUpdate();
 
+            startaMotor();
+
             String timeStamp = timeClient.getFormattedDate();
             writeFirebase(timeStamp);
-
-            digitalWrite(LED_BLUE, HIGH);
-            delay(30);
-            digitalWrite(LED_BLUE, LOW);
           }
         }
 
@@ -119,6 +144,7 @@ void wifiConfig() {
 
 void setup() {
   Serial.begin(9600);
+  motor.attach(servoPin);  // attaches the servo on pin 9 to the servo object
 
   wifiConfig();
 
